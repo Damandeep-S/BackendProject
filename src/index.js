@@ -1,5 +1,6 @@
 import connectDB from "./db/index.js";
 import 'dotenv/config'
+import {app} from './app.js'
 
 connectDB()
 .then(()=>{
@@ -10,3 +11,4 @@ connectDB()
 .catch((err)=>{
     console.log("MONGODB connection failed !!!",err);
 })
+
