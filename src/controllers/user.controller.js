@@ -18,7 +18,6 @@ const registerUser=asyncHandler( async(req, res)=>{
 
 
     const {username,email,fullName,password}= req.body
-    console.log("email: ",email);
 
     if ([fullName,email,username,password].some((field)=>
         field?.trim()===""
@@ -26,7 +25,7 @@ const registerUser=asyncHandler( async(req, res)=>{
         throw new ApiError(400,"All fields are required")
     }
 
-    const existedUser=User.findOne({
+    const existedUser=await User.findOne({
         $or: [ { username },{ email } ]
     })
     if(existedUser){
@@ -34,30 +33,39 @@ const registerUser=asyncHandler( async(req, res)=>{
     }
 
     const avatarLocalPath=req.files?.avatar[0]?.path;
-    const coverImageLocalPath=req.files?.coverImage[0]?.path;
+    // const coverImageLocalPath=req.files?.coverImage[0]?.path;
+    //It will give error cannot read properties, when we did not give cover image
+
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length>0){
+        coverImageLocalPath=req.files.coverImage[0].path
+    }
+
+
 
     if(!avatarLocalPath){
         throw new ApiError(400,"Avatar file is required")
     }
 
-    const avatar=await uploadOnCloudinary(avatarLocalPath)
-    const coveImage=await uploadOnCloudinary(coverImageLocalPath)
-    if(!avatar){
-        throw new ApiError(400,"Avatar is required")
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+
+    if (!avatar) {
+        throw new ApiError(400, "Avatar is required")
     }
 
     //Now if everything is good then we make a object and send it to db
 
-    const User=await User.create({
+    const newUser=await User.create({
         fullName,
         avatar:avatar.url,
-        coverImage:coveImage?.url || "",
+        coverImage:coverImage?.url || "",
         email,
         password,
         username:username.toLowerCase()
     })
 
-    const createdUser= await User.findById(User._id).select(
+    const createdUser= await User.findById(newUser._id).select(
         "-password -refreshToken"
     )
 
