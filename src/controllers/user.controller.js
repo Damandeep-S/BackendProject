@@ -244,13 +244,13 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  return res.status(200).json(200, req.user, "Current user fetched");
+  return res.status(200).json( new ApiResponse(200, req.user, "Current user fetched"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
 
-  if (!fullName || !email) {
+  if (!fullName && !email) {
     throw new ApiError(400, "All fields are required");
   }
 
@@ -393,7 +393,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId.createFromHexString(req.user._id),
+        _id: new mongoose.Types.ObjectId(req.user._id),
       },
     },
     {
