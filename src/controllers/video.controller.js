@@ -75,6 +75,20 @@ const publishAVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, videoDetails, "Video Uploaded Successfully"));
 });
 
+const getVideoById = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!videoId?.trim()) {
+    throw new ApiError(400, "Video Id is required");
+  }
 
+  const video = await Video.findById(videoId).select("videoFile");
 
-export { publishAVideo, };
+  if (!video) {
+    throw new ApiError(400, "Video not found with this id");
+  }
+  res
+    .status(200)
+    .json(new ApiResponse(200, video, "Video link fetched Successfully"));
+});
+
+export { publishAVideo, getVideoById };
