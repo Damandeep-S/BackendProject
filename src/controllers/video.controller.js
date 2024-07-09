@@ -91,4 +91,21 @@ const getVideoById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, "Video link fetched Successfully"));
 });
 
-export { publishAVideo, getVideoById };
+const deleteVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params
+  if (!videoId?.trim()) {
+    throw new ApiError(404, "Video Id is required");
+  }
+
+  const video=await Video.findByIdAndDelete(videoId)
+  if(!video){
+    throw new ApiError(400,"Video does not exists")
+  }
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "Video deleted successfully"));
+})
+
+
+export { publishAVideo, getVideoById,deleteVideo };
