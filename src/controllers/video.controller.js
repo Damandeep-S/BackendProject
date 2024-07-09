@@ -92,20 +92,69 @@ const getVideoById = asyncHandler(async (req, res) => {
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {
-  const { videoId } = req.params
+  const { videoId } = req.params;
   if (!videoId?.trim()) {
     throw new ApiError(404, "Video Id is required");
   }
 
-  const video=await Video.findByIdAndDelete(videoId)
-  if(!video){
-    throw new ApiError(400,"Video does not exists")
+  const video = await Video.findByIdAndDelete(videoId);
+  if (!video) {
+    throw new ApiError(400, "Video does not exists");
   }
 
   res
     .status(200)
     .json(new ApiResponse(200, null, "Video deleted successfully"));
-})
+});
+
+const updateVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const { title, description } = req.body;
+
+  if (!videoId) {
+    throw new ApiError(400, "Video Id is required");
+  }
+
+  if ([title, description].some((fields) => fields.trim() === "")) {
+    throw new ApiError(400, "Title and Description is required");
+  }
+
+  const thumbnailLocalPath = req.file?.path;
+
+  if (!thumbnailLocalPath) {
+    throw new ApiError(400, "Thumbnail is required");
+  }
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+  if (!thumbnail) {
+    throw new ApiError(
+      500,
+      "There was Problem while uploading Thumbnail on cloud"
+    );
+  }
+
+  const updatedVideo = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: {
+        title,
+        description,
+        thumbnail: thumbnail.url,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  
+  if (!updatedVideo) {
+    throw new ApiError(500, "Video was not Updated Due to some error");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedVideo, "Video was updated successfully"));
+});
 
 
-export { publishAVideo, getVideoById,deleteVideo };
+export { publishAVideo, getVideoById, deleteVideo, updateVideo};
