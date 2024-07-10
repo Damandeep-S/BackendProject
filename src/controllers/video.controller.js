@@ -86,7 +86,7 @@ const getVideoById = asyncHandler(async (req, res) => {
   if (!video) {
     throw new ApiError(400, "Video not found with this id");
   }
-  res
+  return res
     .status(200)
     .json(new ApiResponse(200, video, "Video link fetched Successfully"));
 });
@@ -102,7 +102,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Video does not exists");
   }
 
-  res
+  return res
     .status(200)
     .json(new ApiResponse(200, null, "Video deleted successfully"));
 });
@@ -146,7 +146,7 @@ const updateVideo = asyncHandler(async (req, res) => {
       new: true,
     }
   );
-  
+
   if (!updatedVideo) {
     throw new ApiError(500, "Video was not Updated Due to some error");
   }
@@ -156,5 +156,59 @@ const updateVideo = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedVideo, "Video was updated successfully"));
 });
 
+const togglePublishStatus = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  if (!videoId) {
+    throw new ApiError(400, "Video id is required");
+  }
+  // const currentVideo = await Video.findById(videoId);
 
-export { publishAVideo, getVideoById, deleteVideo, updateVideo};
+  // if(!currentVideo){
+  //   throw new ApiError(404,"Video does not exists")
+  // }
+
+  // const updatedVideo = await Video.findByIdAndUpdate(
+  //   videoId,
+  //   {
+  //     $set: {
+  //       isPublished: !currentVideo.isPublished,
+  //     },
+  //   },
+  //   {
+  //     new: true,
+  //   }
+  // );
+
+  const updatedVideo = await Video.findOneAndUpdate(
+    { _id: videoId },
+    [
+      {
+        $set: {
+          isPublished: { $not: "$isPublished" }
+        }
+      }
+    ],
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedVideo) {
+    throw new ApiError(400, "Video status was not updated");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedVideo, "Video status updated"));
+});
+
+const getAllVideos = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+  //TODO: get all videos based on query, sort, pagination
+});
+
+export {
+  publishAVideo,
+  getVideoById,
+  deleteVideo,
+  updateVideo,
+  togglePublishStatus,
+};
