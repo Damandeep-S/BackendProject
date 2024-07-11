@@ -185,9 +185,9 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     [
       {
         $set: {
-          isPublished: { $not: "$isPublished" }
-        }
-      }
+          isPublished: { $not: "$isPublished" },
+        },
+      },
     ],
     { new: true, runValidators: true }
   );
@@ -204,6 +204,91 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
   //TODO: get all videos based on query, sort, pagination
+  const matchCondition = {
+    $or: [
+      { title: { $regex: query, $options: "i" } }, //The "i" option makes the matching case-insensitive, meaning it will match both uppercase and lowercase characters
+      { description: { $regex: query, $options: "i" } },
+    ],
+  };
+
+  if (userId) {
+    matchCondition.owner = new mongoose.Types.ObjectId(userId);
+  }
+  var videoAggregate;
+  try {
+    videoAggregate = Video.aggregate([
+      {
+        $match: matchCondition,
+      },
+
+      {
+        $lookup: {
+          from: "users",
+          localField: "owner",
+          foreignField: "_id",
+          as: "owner",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                fullName: 1,
+                avatar: "$avatar.url",
+                username: 1,
+              },
+            },
+          ],
+        },
+      },
+
+      {
+        $addFields: {
+          owner: {
+            $first: "$owner",
+          },
+        },
+      },
+
+      {
+        $sort: {
+          [sortBy || "createdAt"]: sortType || 1,
+        },
+      },
+    ]);
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error.message || "Internal server error in video aggregation"
+    );
+  }
+
+  const options = {
+    page,
+    limit,
+    customLabels: {
+      totalDocs: "totalVideos",
+      docs: "videos",
+    },
+    skip: (page - 1) * limit,
+    limit: parseInt(limit),
+  };
+  Video.aggregatePaginate(videoAggregate, options)
+    .then((result) => {
+      if (result?.videos?.length === 0 && userId) {
+        return res
+          .status(200)
+          .json(new ApiResponse(200, [], "No videos found"));
+      }
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, result, "video fetched successfully"));
+    })
+    .catch((error) => {
+      throw new ApiError(
+        500,
+        error?.message || "Internal server error in video aggregate Paginate"
+      );
+    });
 });
 
 export {
@@ -212,4 +297,5 @@ export {
   deleteVideo,
   updateVideo,
   togglePublishStatus,
+  getAllVideos,
 };
