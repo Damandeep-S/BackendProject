@@ -3,7 +3,7 @@ import { Playlist } from "../models/playlist.model.js";
 import { Video } from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
@@ -100,9 +100,36 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, updatedPlaylist, "Video added to playlist"));
 });
 
+const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
+  const { playlistId, videoId } = req.params;
+
+  if (!isValidObjectId(playlistId)) {
+    throw new ApiError(400, "Invalid Playlist Id");
+  }
+
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid Video Id");
+  }
+
+  const playlist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    { $pull: { videos: videoId } },
+    { new: true }
+  );
+
+  if (!playlist) {
+    throw new ApiError(404, "Playlist not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, playlist, "Video Removed from the playlist"));
+});
+
 export {
   createPlaylist,
   getUserPlaylists,
   getPlaylistById,
   addVideoToPlaylist,
+  removeVideoFromPlaylist,
 };
